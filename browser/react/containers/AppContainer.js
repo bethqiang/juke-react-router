@@ -9,121 +9,154 @@ import Album from '../components/Album';
 import Sidebar from '../components/Sidebar';
 import Player from '../components/Player';
 
-import { convertAlbum, convertAlbums, skip } from '../utils';
+import { convertAlbum, convertAlbums, skip, convertSongs } from '../utils';
 
 export default class AppContainer extends Component {
 
-  constructor (props) {
-    super(props);
-    this.state = initialState;
+    constructor(props) {
+        super(props);
+        this.state = initialState;
 
-    this.toggle = this.toggle.bind(this);
-    this.toggleOne = this.toggleOne.bind(this);
-    this.next = this.next.bind(this);
-    this.prev = this.prev.bind(this);
-    this.selectAlbum = this.selectAlbum.bind(this);
-    this.deselectAlbum = this.deselectAlbum.bind(this);
-  }
+        this.toggle = this.toggle.bind(this);
+        this.toggleOne = this.toggleOne.bind(this);
+        this.next = this.next.bind(this);
+        this.prev = this.prev.bind(this);
+        this.selectAlbum = this.selectAlbum.bind(this);
+        this.deselectAlbum = this.deselectAlbum.bind(this);
+        this.selectArtist = this.selectArtist.bind(this);
+    }
 
-  componentDidMount () {
-    axios.get('/api/albums/')
-      .then(res => res.data)
-      .then(album => this.onLoad(convertAlbums(album)));
+    componentDidMount() {
+        axios.get('/api/albums/')
+            .then(res => res.data)
+            .then(album => this.onLoad(convertAlbums(album)));
 
-    AUDIO.addEventListener('ended', () =>
-      this.next());
-    AUDIO.addEventListener('timeupdate', () =>
-      this.setProgress(AUDIO.currentTime / AUDIO.duration));
-  }
+        axios.get('/api/artists/')
+            .then(res => res.data)
+            .then(artists => this.setState({ artists: artists }))
 
-  onLoad (albums) {
-    this.setState({
-      albums: albums
-    });
-  }
 
-  play () {
-    AUDIO.play();
-    this.setState({ isPlaying: true });
-  }
+        // this.onLoad(('artist', artist)));
 
-  pause () {
-    AUDIO.pause();
-    this.setState({ isPlaying: false });
-  }
 
-  load (currentSong, currentSongList) {
-    AUDIO.src = currentSong.audioUrl;
-    AUDIO.load();
-    this.setState({
-      currentSong: currentSong,
-      currentSongList: currentSongList
-    });
-  }
 
-  startSong (song, list) {
-    this.pause();
-    this.load(song, list);
-    this.play();
-  }
+        AUDIO.addEventListener('ended', () =>
+            this.next());
+        AUDIO.addEventListener('timeupdate', () =>
+            this.setProgress(AUDIO.currentTime / AUDIO.duration));
+    }
 
-  toggleOne (selectedSong, selectedSongList) {
-    if (selectedSong.id !== this.state.currentSong.id)
-      this.startSong(selectedSong, selectedSongList);
-    else this.toggle();
-  }
+    onLoad(albums) {
+        this.setState({
+            albums: albums
+        });
+    }
 
-  toggle () {
-    if (this.state.isPlaying) this.pause();
-    else this.play();
-  }
+    play() {
+        AUDIO.play();
+        this.setState({ isPlaying: true });
+    }
 
-  next () {
-    this.startSong(...skip(1, this.state));
-  }
+    pause() {
+        AUDIO.pause();
+        this.setState({ isPlaying: false });
+    }
 
-  prev () {
-    this.startSong(...skip(-1, this.state));
-  }
+    load(currentSong, currentSongList) {
+        AUDIO.src = currentSong.audioUrl;
+        AUDIO.load();
+        this.setState({
+            currentSong: currentSong,
+            currentSongList: currentSongList
+        });
+    }
 
-  setProgress (progress) {
-    this.setState({ progress: progress });
-  }
+    startSong(song, list) {
+        console.log(`startSong was called with ${song.url} and ${list}`);
+        this.pause();
+        this.load(song, list);
+        this.play();
+    }
 
-  selectAlbum (albumId) {
-    axios.get(`/api/albums/${albumId}`)
-      .then(res => res.data)
-      .then(album => this.setState({
-        selectedAlbum: convertAlbum(album)
-      }));
-  }
+    toggleOne(selectedSong, selectedSongList) {
+        console.log(`toggleOne was called with ${selectedSong} and ${selectedSongList}`);
+        if (selectedSong.id !== this.state.currentSong.id)
+            this.startSong(selectedSong, selectedSongList);
+        else this.toggle();
+    }
 
-  deselectAlbum () {
-    this.setState({ selectedAlbum: {}});
-  }
+    toggle() {
+        if (this.state.isPlaying) this.pause();
+        else this.play();
+    }
 
-  render () {
-    return (
-      <div id="main" className="container-fluid">
-        <div className="col-xs-2">
-          <Sidebar deselectAlbum={this.deselectAlbum} />
-        </div>
-        <div className="col-xs-10">
+    next() {
+        this.startSong(...skip(1, this.state));
+    }
 
-        {
-          this.props.children ?
-            React.cloneElement(this.props.children, {
-              album: this.state.selectedAlbum,
-              currentSong: this.state.currentSong,
-              isPlaying: this.state.isPlaying,
-              toggleOne: this.toggleOne,
-              albums: this.state.albums,
-              selectAlbum: this.selectAlbum,
-            })
-             : null
-        }
+    prev() {
+        this.startSong(...skip(-1, this.state));
+    }
 
-        {/*{
+    setProgress(progress) {
+        this.setState({ progress: progress });
+    }
+
+    selectAlbum(albumId) {
+        axios.get(`/api/albums/${albumId}`)
+            .then(res => res.data)
+            .then(album => this.setState({
+                selectedAlbum: convertAlbum(album)
+            }));
+    }
+
+    deselectAlbum() {
+        this.setState({ selectedAlbum: {} });
+    }
+
+    selectArtist(artistId) {
+        console.log("selectArtist was called");
+        Promise.all([
+            axios.get(`api/artists/${artistId}`),
+            axios.get(`api/artists/${artistId}/albums`),
+            axios.get(`api/artists/${artistId}/songs`)
+        ]).then(res => {
+            console.log("Axios completed 3 gets");
+            let [artist, albums, songs] = res;
+            let returnArtist = artist.data;
+            returnArtist.albums = convertAlbums(albums.data);
+            returnArtist.songs = convertSongs(songs.data);
+            this.setState({
+                selectedArtist: returnArtist
+            });
+        })
+    }
+
+    render() {
+        return (
+            <div id="main" className="container-fluid">
+                <div className="col-xs-2">
+                    <Sidebar deselectAlbum={this.deselectAlbum} />
+                </div>
+                <div className="col-xs-10">
+
+                    {
+                        this.props.children ?
+                            React.cloneElement(this.props.children, {
+                                album: this.state.selectedAlbum,
+                                currentSong: this.state.currentSong,
+                                isPlaying: this.state.isPlaying,
+                                toggleOne: this.toggleOne,
+                                albums: this.state.albums,
+                                selectAlbum: this.selectAlbum,
+                                selectArtist: this.selectArtist,
+                                artists: this.state.artists,
+                                artist: this.state.selectedArtist
+                            })
+                            : null
+                    }
+
+                    {/*{
           this.state.selectedAlbum.id ?
           <Album
             album={this.state.selectedAlbum}
@@ -136,19 +169,19 @@ export default class AppContainer extends Component {
             selectAlbum={this.selectAlbum}
           />
         }*/}
-        </div>
-        <Player
-          currentSong={this.state.currentSong}
-          currentSongList={this.state.currentSongList}
-          isPlaying={this.state.isPlaying}
-          progress={this.state.progress}
-          next={this.next}
-          prev={this.prev}
-          toggle={this.toggle}
-        />
-      </div>
-    );
-  }
+                </div>
+                <Player
+                    currentSong={this.state.currentSong}
+                    currentSongList={this.state.currentSongList}
+                    isPlaying={this.state.isPlaying}
+                    progress={this.state.progress}
+                    next={this.next}
+                    prev={this.prev}
+                    toggle={this.toggle}
+                    />
+            </div>
+        );
+    }
 }
 
 // {
