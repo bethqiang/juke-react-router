@@ -133,6 +133,7 @@ export default class AppContainer extends Component {
     }
 
     render() {
+        {console.log("selectedArtist:", this.state.selectedArtist)}
         return (
             <div id="main" className="container-fluid">
                 <div className="col-xs-2">

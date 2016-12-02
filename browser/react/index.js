@@ -15,7 +15,9 @@ ReactDOM.render(
       <IndexRedirect to="/albums" />
       <Route path="albums/:albumId" component={Album} />
       <Route path="/albums" component={Albums} />
-      <Route path="artists/:artistId" component={Artist} />
+      <Route path="artists/:artistId" component={Artist}>
+        <Route path="/artists/:artistId/albums" component={Albums} />
+      </Route>
       <Route path="/artists" component={Artists} />
     </Route>
   </Router>,
